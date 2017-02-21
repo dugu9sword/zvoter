@@ -298,15 +298,25 @@ def user_center_voter():
     """用户中心投票页面"""
     login_flag = is_login(session)  # 用户是否已登录
     if login_flag:
+        """取用户名和密码"""
         try:
-            user_img_url = session['user_img_url']
+            user_id = session['user_id']
+            user_password = session['user_password']
         except KeyError:
-            user_img_url = ""
-        user_img_url = '../static/image/guest.png' if user_img_url == "" else session['user_img_url']
-        user_level = 1  # 暂时替代
-        return render_template("user_center_voter.html",
-                               login_flag=login_flag,
-                               user_img_url=user_img_url, user_level=user_level)
+            abort(403)
+        query_result = user.get_user_info(user_id, user_password)
+        if query_result['message'] == "success":
+            user_info = query_result['data']
+            try:
+                user_img_url = session['user_img_url']
+            except KeyError:
+                user_img_url = ""
+            user_img_url = '../static/image/guest.png' if user_img_url == "" else session['user_img_url']
+            user_level = 1  # 暂时替代
+            return render_template("user_center_voter.html",
+                                   login_flag=login_flag,
+                                   user_img_url=user_img_url, user_level=user_level,
+                                   user_info = user_info)
     else:
         return render_template("user_center_voter.html", login_flag=login_flag)
 
@@ -371,6 +381,7 @@ def edit_user_info():
     """用户编辑自己的信息"""
     the_form = request.form
     arg_dict = {key: the_form[key] for key in the_form.keys()}
+    print(arg_dict)
     result = user.edit_user(**arg_dict)
     return json.dumps(result)
 
