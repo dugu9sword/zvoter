@@ -193,3 +193,77 @@ def manage_topic_admin(**kwargs):
 
 def index_list():
     """获取个频道最新的话题列表"""
+
+
+def fetch_topics_by_id_list(ids):
+    """根据话题id列表获取话题内容"""
+    session = my_db.sql_session()
+    columns=get_columns()
+    id_lists = ",".join(map(lambda x:str(x),ids))
+    sql = "select * from topic_info where top_id in ({})" .format(id_lists)
+    data=[]
+    try:
+        proxy_result = session.execute(sql)
+        result = proxy_result.fetchall()
+        if len(result) != 0:
+            result = [my_db.str_format(x) for x in result]
+            data = [dict(zip(columns, x)) for x in result]
+        else:
+            data = []
+    except Exception as e:
+        print(e)
+    finally:
+        session.close()
+    return data
+
+
+def fetch_created_topics(user_id):
+    """根据用户id获取创建过的话题"""
+    session = my_db.sql_session()
+    columns=get_columns()
+    sql = "select * from topic_info where author = {}" .format(user_id)
+    data=[]
+    try:
+        proxy_result = session.execute(sql)
+        result = proxy_result.fetchall()
+        if len(result) != 0:
+            result = [my_db.str_format(x) for x in result]
+            data = [dict(zip(columns, x)) for x in result]
+        else:
+            data = []
+    except Exception as e:
+        print(e)
+    finally:
+        session.close()
+    return data
+
+
+def fetch_joined_topics(user_id):
+    """根据用户id获取参加过的话题"""
+    session = my_db.sql_session()
+    columns=get_columns()
+    sql = "select * from topic_info where top_id in " \
+          "(select topic_id from vote_count where user_id = {})" \
+        .format(user_id)
+    data=[]
+    try:
+        proxy_result = session.execute(sql)
+        result = proxy_result.fetchall()
+        if len(result) != 0:
+            result = [my_db.str_format(x) for x in result]
+            data = [dict(zip(columns, x)) for x in result]
+        else:
+            data = []
+    except Exception as e:
+        print(e)
+    finally:
+        session.close()
+    return data
+
+def fetch_starred_topics(user_id):
+    """根据用户id获取收藏过的话题"""
+    return []
+
+print(fetch_topics_by_id_list([17022217124276945152]))
+print(len(fetch_created_topics(17020615215443211081)))
+print(len(fetch_joined_topics(17020811543015976964)))

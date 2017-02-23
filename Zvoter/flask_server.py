@@ -313,10 +313,17 @@ def user_center_voter():
                 user_img_url = ""
             user_img_url = '../static/image/guest.png' if user_img_url == "" else session['user_img_url']
             user_level = 1  # 暂时替代
+            created_topics = topic.fetch_created_topics(user_id)
+            joined_topics = topic.fetch_joined_topics(user_id)
+            starred_topics = topic.fetch_starred_topics(user_id)
+            print(created_topics)
             return render_template("user_center_voter.html",
                                    login_flag=login_flag,
                                    user_img_url=user_img_url, user_level=user_level,
-                                   user_info = user_info)
+                                   user_info = user_info,
+                                   created_topics = created_topics,
+                                   joined_topics = joined_topics,
+                                   starred_topics = starred_topics)
     else:
         return render_template("user_center_voter.html", login_flag=login_flag)
 
