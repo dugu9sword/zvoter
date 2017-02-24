@@ -349,3 +349,4 @@ def page(index=1, length=30):
 # print(add_user(user_id='20121457894123456279',user_phone='15618311366',user_password="",create_date='2917-01-01'))
 # print(edit_user(user_id='20121457894123456789',user_phone='15618317376',user_password="12",create_date='2917-01-01'))
 # print(change_status("delete",'20121457894123456789'))
+# print(edit_user(user_id='17022016502781053829',user_nickname='zhy'))

@@ -470,6 +470,30 @@ def user_upload():
         return "未授权的访问"
 
 
+@app.route('/user_portrait_upload', methods=('GET', 'POST'))
+@login_required_user
+def user_portrait_upload():
+    """用户上传图片"""
+    astr = request.form.get("img_csrf")
+    if check_img_csrf(astr):
+        file = request.files['myfile']
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)  # 取文件类型
+            filename = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f") + str(random.randint(10, 99)) + "." + \
+                       filename  # 格式化到毫秒再加一个任意数
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+            filepath = '../static/upload/images/' + filename
+            user.edit_user(user_id= session['user_id'],user_img_url=filepath)
+            session['user_img_url']=filepath
+            return filepath
+        else:
+            return "只允许图片类型的文件"
+    else:
+        return "未授权的访问"
+
+
+
 @app.route("/img_csrf", methods=['post'])
 def img_csrf():
     """获取img_csrf"""
