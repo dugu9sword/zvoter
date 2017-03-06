@@ -60,55 +60,54 @@ def get_sign(born_date):
 def check_user_args(**kwargs):
     """检查对user_info进行操作的参数，防止sql注入"""
     flag = True
-    info = None
     columns = get_columns()
     for k, v in kwargs.items():
         if k not in columns:
             """有多余的参数"""
             flag = False
-            info = "有多余的参数"
+            print("有多余的参数")
             break
         elif k == 'user_born_date' or k == "user_address":
             result = my_db.validate_arg(v, "-")
             if not result:
                 flag = result
-                info = "user_born_date 或 user_address 验证失败"
+                print("user_born_date 或 user_address 验证失败")
                 break
         elif k == "create_date":
             result = my_db.validate_arg(v, "-:")
             if not result:
                 flag = result
-                info = "create_date 验证失败"
+                print("create_date 验证失败")
                 break
         elif k == "user_phone":
             result = my_db.check_phone(v)
             if not result:
                 flag = result
-                info = "user_phone 验证失败"
+                print("user_phone 验证失败")
                 break
         elif k == "user_nickname":
             result = my_db.validate_arg(v, "_")
             if not result:
                 flag = result
-                info = "user_nickname 验证失败"
+                print("user_nickname 验证失败")
                 break
         elif k == "user_realname":
             result = my_db.validate_arg(v, ".")
             if not result:
                 flag = result
-                info = "user_realname 验证失败"
+                print("user_realname 验证失败")
                 break
         elif k == "user_img_url":
             result = my_db.validate_arg(v, "._/-")
             if not result:
                 flag = result
-                info = "user_img_url 验证失败"
+                print("user_img_url 验证失败")
                 break
         elif k == "user_mail":
             result = my_db.validate_arg(v, "._@-")
             if not result:
                 flag = result
-                info = "user_mail 验证失败"
+                print("user_mail 验证失败")
                 break
         else:
             result = my_db.validate_arg(v)
@@ -342,11 +341,8 @@ def page(index=1, length=30):
     return message
 
 
-
-
 # print(page(1, 30))
 # print(login("15618317376", ""))
 # print(add_user(user_id='20121457894123456279',user_phone='15618311366',user_password="",create_date='2917-01-01'))
 # print(edit_user(user_id='20121457894123456789',user_phone='15618317376',user_password="12",create_date='2917-01-01'))
 # print(change_status("delete",'20121457894123456789'))
-# print(edit_user(user_id='17022016502781053829',user_nickname='zhy'))
