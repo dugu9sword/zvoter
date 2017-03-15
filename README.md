@@ -4,7 +4,8 @@
 
 *update  2017 - 3 -16*
 
-
+**微信登陆页面**
+https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx85625e403869c2e1&redirect_uri=http%3a%2f%2fwww.zvoter.com%2fweixin_auth&response_type=code&scope=snsapi_userinfo&state=123#wechat_redirect
 
 **数据库基础改动**
 
