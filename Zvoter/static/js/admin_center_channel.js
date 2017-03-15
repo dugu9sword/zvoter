@@ -53,7 +53,7 @@ $(function () {
         var name = prompt("修改类别 '" + $obj.text() + "' 名称");
         if (name) {
             // 检查是否重复
-            name = $.trim(name);
+            name = $.trim(name);样式
             if(!is_repeat(name)){
                 alert("类别名重复");
             }
