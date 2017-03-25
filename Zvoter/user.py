@@ -5,6 +5,9 @@ import datetime
 import re
 import json
 from threading import Lock
+from socket import *
+from threading import Thread
+import signal
 
 
 def get_columns(first=False):
@@ -318,35 +321,87 @@ def check_phone_registered(phone):
         session.close()
 
 
-def generate_dumb_phone():
-    """生成一个占位用的电话号码，从90000000000开始生成"""
-    return dumb_phone_generator.next_phone_num()
+# 获取伪电话号码分为两个模块:服务器模块和客户端模块,客户端向服务器请求电话号码,采取socket进行通信
+# 服务器模块通过端口号的唯一占用,保证进程的唯一性.客户端可以由任意多个进程和任意多个线程使用
+# 可能出现的故障:
+# 如果测试该函数,在函数结束后,端口仍处于TCP的TIME-WAIT状态.这时候如果立刻进行第二次测试,会出现端口号
+# 占用报错.因此需要等待一会儿(端口释放),或者暂时修改端口号.
+PORT = 23333
 
-
-class DumbPhoneGenerator:
-    """伪手机号码生成器"""
-    dumb_phone_num = 90000000000
-    dumb_phone_lock = Lock()
+class DumbPhoneServer(Thread):
+    dumb_phone_lock=Lock()
 
     def __init__(self):
-        """使用数据库中最大的手机号码初始化内部存储的伪手机号码值"""
-        session = my_db.sql_session()
-        sql = "SELECT MAX(user_phone) FROM zvoter.user_info"
-        result = session.execute(sql)
-        if result is not None:
-            maxphone = int(result.fetchone()[0])
-            if self.dumb_phone_num < maxphone:
-                self.dumb_phone_num = maxphone
+        """如果端口已经被占用，那么就放弃该服务器"""
+        Thread.__init__(self)
+        try:
+            self.ss = socket(AF_INET, SOCK_STREAM)
+            self.ss.bind(('',PORT))
+            self.daemon = True
+            session = my_db.sql_session()
+            sql = "SELECT MAX(user_phone) FROM zvoter.user_info"
+            result = session.execute(sql)
+            if result is not None:
+                maxphone = int(result.fetchone()[0])
+            self.dumb_phone_num = 90000000000 if 90000000000 > maxphone else maxphone
+        except:
+            self.ss = None
+            print("port already in use.")
 
-    def next_phone_num(self):
-        """生成下一个伪手机号码"""
+    def run(self):
+        if self.ss is not None:
+            self.ss.listen()
+            while True:
+                # 服务器轮询
+                s, _ = self.ss.accept()
+                Thread(target=self.send_num, args=(s,)).start()
+
+    def send_num(self, socket):
+        """连接客户端并发送假电话号码"""
         self.dumb_phone_lock.acquire()
         self.dumb_phone_num += 1
-        value_to_return = self.dumb_phone_num
+        to_send=self.dumb_phone_num
         self.dumb_phone_lock.release()
-        return value_to_return
+        socket.send(b'%d'%(to_send))
+        socket.close()
 
-dumb_phone_generator = DumbPhoneGenerator()
+
+def generate_dumb_phone():
+    """生成一个占位用的电话号码，从90000000000开始生成"""
+    s = socket(AF_INET, SOCK_STREAM)
+    # s.settimeout(1)
+    s.connect(('localhost', PORT))
+    data = int(s.recv(16))
+    return data
+
+
+dumb_phone_server = DumbPhoneServer()
+dumb_phone_server.start()
+
+# class DumbPhoneGenerator:
+#     """伪手机号码生成器"""
+#     dumb_phone_num = 90000000000
+#     dumb_phone_lock = Lock()
+#
+#     def __init__(self):
+#         """使用数据库中最大的手机号码初始化内部存储的伪手机号码值"""
+#         session = my_db.sql_session()
+#         sql = "SELECT MAX(user_phone) FROM zvoter.user_info"
+#         result = session.execute(sql)
+#         if result is not None:
+#             maxphone = int(result.fetchone()[0])
+#             if self.dumb_phone_num < maxphone:
+#                 self.dumb_phone_num = maxphone
+#
+#     def next_phone_num(self):
+#         """生成下一个伪手机号码"""
+#         self.dumb_phone_lock.acquire()
+#         self.dumb_phone_num += 1
+#         value_to_return = self.dumb_phone_num
+#         self.dumb_phone_lock.release()
+#         return value_to_return
+
+##################################################
 
 def check_wx(user_open_id):
     """根据用户微信id和密码获取信息"""
