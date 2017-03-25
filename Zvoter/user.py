@@ -4,6 +4,7 @@ import sqlalchemy.exc
 import datetime
 import re
 import json
+from threading import Lock
 
 
 def get_columns(first=False):
@@ -66,68 +67,74 @@ def check_user_args(**kwargs):
         if k not in columns:
             """有多余的参数"""
             flag = False
-            msg=("有多余的参数")
+            msg = ("有多余的参数")
             break
         elif k == 'user_born_date' or k == "user_address":
             result = my_db.validate_arg(v, "-")
             if not result:
                 flag = result
-                msg=("user_born_date 或 user_address 验证失败")
+                msg = ("user_born_date 或 user_address 验证失败")
+                print("user_born_date 或 user_address 验证失败")
                 break
         elif k == "create_date":
             result = my_db.validate_arg(v, "-:")
             if not result:
                 flag = result
-                msg=("create_date 验证失败")
+                msg = ("create_date 验证失败")
+                print("create_date 验证失败")
                 break
         elif k == "user_phone":
             result = my_db.check_phone(v)
             if not result:
                 flag = result
-                msg=("user_phone 验证失败")
+                msg = ("user_phone 验证失败")
+                print("user_phone 验证失败")
                 break
         elif k == "user_nickname":
             result = my_db.validate_arg(v, "_")
             if not result:
                 flag = result
-                msg=("user_nickname 验证失败")
+                msg = ("user_nickname 验证失败")
+                print("user_nickname 验证失败")
                 break
         elif k == "user_realname":
             result = my_db.validate_arg(v, ".")
             if not result:
                 flag = result
-                msg=("user_realname 验证失败")
+                msg = ("user_realname 验证失败")
+                print("user_realname 验证失败")
                 break
         elif k == "user_img_url":
-            result = my_db.validate_arg(v, ":._/-")
+            result = my_db.validate_arg(v, "._/-")
             if not result:
                 flag = result
-                msg=("user_img_url 验证失败")
+                msg = ("user_img_url 验证失败")
+                print("user_img_url 验证失败")
                 break
         elif k == "user_mail":
             result = my_db.validate_arg(v, "._@-")
             if not result:
                 flag = result
-                msg=("user_mail 验证失败")
+                msg = ("user_mail 验证失败")
                 break
         elif k == "user_open_id":
             result = my_db.validate_arg(v, "-")
             if not result:
                 flag = result
-                msg=("user_open_id 验证失败")
+                msg = ("user_open_id 验证失败")
                 break
         else:
             result = my_db.validate_arg(v)
             if not result:
                 flag = result
                 break
-    return flag,msg
+    return flag, msg
 
 
 def add_user(**kwargs):
     """增加用户,参数必须是键值对的形式,注意，暂时没追加微信登录的方式"""
     message = {"message": "success"}
-    flag, msg=check_user_args(**kwargs)
+    flag, msg = check_user_args(**kwargs)
     if not flag:
         message["message"] = "参数错误 %s"%(msg)
     else:
@@ -156,7 +163,7 @@ def add_user(**kwargs):
                 message['message'] = "注册失败，请联系客服"
         except Exception as e2:
             print(e2)
-            print("unknown error")
+            print("未知错误")
         finally:
             session.close()
     return message
@@ -247,7 +254,6 @@ def login_phone(user_phone, user_password):
 
 def login_wx(open_id, union_id):
     """用户微信登录"""
-
     pass
 
 
@@ -312,6 +318,36 @@ def check_phone_registered(phone):
         session.close()
 
 
+def generate_dumb_phone():
+    """生成一个占位用的电话号码，从90000000000开始生成"""
+    return dumb_phone_generator.next_phone_num()
+
+
+class DumbPhoneGenerator:
+    """伪手机号码生成器"""
+    dumb_phone_num = 90000000000
+    dumb_phone_lock = Lock()
+
+    def __init__(self):
+        """使用数据库中最大的手机号码初始化内部存储的伪手机号码值"""
+        session = my_db.sql_session()
+        sql = "SELECT MAX(user_phone) FROM zvoter.user_info"
+        result = session.execute(sql)
+        if result is not None:
+            maxphone = int(result.fetchone()[0])
+            if self.dumb_phone_num < maxphone:
+                self.dumb_phone_num = maxphone
+
+    def next_phone_num(self):
+        """生成下一个伪手机号码"""
+        self.dumb_phone_lock.acquire()
+        self.dumb_phone_num += 1
+        value_to_return = self.dumb_phone_num
+        self.dumb_phone_lock.release()
+        return value_to_return
+
+dumb_phone_generator = DumbPhoneGenerator()
+
 def check_wx(user_open_id):
     """根据用户微信id和密码获取信息"""
     message = {}
@@ -327,7 +363,7 @@ def check_wx(user_open_id):
             result = my_db.str_format(result)
             result = dict(zip(columns, result))
             if result['user_status'] == 1:
-                message["message"]= "exists"
+                message["message"] = "exists"
                 message['data'] = result
             else:
                 message['message'] = "账户已冻结"
@@ -405,6 +441,9 @@ def page(index=1, length=30):
 # print(add_user(user_id='20121457894123456279',user_phone='15618311366',user_password="",create_date='2917-01-01'))
 # print(edit_user(user_id='20121457894123456789',user_phone='15618317376',user_password="12",create_date='2917-01-01'))
 # print(change_status("delete",'20121457894123456789'))
-# print(check_phone_registered(138142345678))
-# print(check_wx('o4-0pwdnvSWQ3Pt4cYyKl9eKBLqI')['message']=='exists')
-# edit_user(user_id = '17022016502781053829' ,user_open_id='123123')
+# print(generate_dumb_phone())
+# import _thread, time
+# for i in range(10000):
+#     _thread.start_new_thread(generate_dumb_phone,())
+# time.sleep(5)
+# print(generate_dumb_phone())

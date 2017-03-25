@@ -179,7 +179,7 @@
 .message{
     margin: 5px 10px 5px 10px;
     padding: 10px 10px 10px 10px;
-    background-color: #d0e9c6;
+    background-color: #eeeeee;
     border-radius: 3px;
 }
 
@@ -206,4 +206,11 @@
 
 .notification_info{
     display: none;
+}
+
+.msgcount{
+    margin: 5px 10px 5px 10px;
+    padding: 10px 10px 10px 10px;
+    font-weight: bold;
+    text-align: center;
 }

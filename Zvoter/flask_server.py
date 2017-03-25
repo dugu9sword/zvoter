@@ -36,7 +36,7 @@ ALLOWED_EXTENSIONS = ('png', 'jpg', 'jpeg', 'gif')  # 允许上传的图片后�
 session_key = os.urandom(24)
 app.config.update({
     'SESSION_PERMANENT': False,  # 配置会话的生命期不是永久有效
-    'PERMANENT_SESSION_LIFETIME': 60*60*2,  # session 闲置超时时间，秒
+    'PERMANENT_SESSION_LIFETIME': 60 * 60 * 2,  # session 闲置超时时间，秒
     "SECRET_KEY": session_key  # 配置session的密钥
 })
 SESSION_TYPE = 'redis'  # flask-session使用redis，注意必须安装redis数据库和对应的redis模块
@@ -312,7 +312,7 @@ def my_login():
                 user_level = 1
                 user_img_url = result['data']['user_img_url']
                 if 'user_open_id' in session.keys():
-                    user.edit_user(user_id = user_id ,user_open_id=session['user_open_id'])
+                    user.edit_user(user_id=user_id, user_open_id=session['user_open_id'])
                 set_user_login_info(session, user_id, user_password, user_img_url, user_level)
                 message = result
 
@@ -405,18 +405,28 @@ def user_center_notification():
                 user_img_url = ""
             user_img_url = '../static/image/guest.png' if user_img_url == "" else session['user_img_url']
             user_level = 1  # 暂时替代
-            notifications=notification.fetch_by_user_id(user_id)
+            notifications = notification.fetch_by_user_id(user_id)
+            count_of_notifications = len(notifications)
+            count_of_unread_notifications = 0
+            for x in notifications:
+                if x['read'] == 0:
+                    count_of_unread_notifications += 1
+            print(notifications)
+            side_bar_list = topic.side_bar_topic_list()
             return render_template("user_center_notification.html",
                                    login_flag=login_flag,
                                    user_img_url=user_img_url, user_level=user_level,
-                                   user_info = user_info,
-                                   notifications = notifications
+                                   user_info=user_info,
+                                   notifications=notifications,
+                                   count_of_notifications = count_of_notifications,
+                                   count_of_unread_notifications = count_of_unread_notifications,
+                                   side_bar_list = side_bar_list
                                    )
     else:
         return render_template("user_center_notification.html", login_flag=login_flag)
 
 
-@app.route("/mark_notification/<notification_id>",methods=['post'])
+@app.route("/mark_notification/<notification_id>", methods=['post'])
 @login_required_user
 def mark_notification(notification_id):
     """通知中心"""
@@ -429,9 +439,9 @@ def mark_notification(notification_id):
         except KeyError:
             abort(403)
         notification.mark_as_read(notification_id)
-        return json.dumps({"message":"successful"})
+        return json.dumps({"message": "successful"})
     else:
-        return json.dumps({"message":"failed"})
+        return json.dumps({"message": "failed"})
 
 
 @app.route("/user_center_voter")
@@ -457,16 +467,18 @@ def user_center_voter():
             user_level = 1  # 暂时替代
             created_topics = topic.fetch_created_topics(user_id)
             joined_topics = topic.fetch_joined_topics(user_id)
-            print(created_topics)
-            print(joined_topics)
+            side_bar_list = topic.side_bar_topic_list()
+            # print(created_topics)
+            # print(joined_topics)
             return render_template("user_center_voter.html",
                                    login_flag=login_flag,
                                    user_img_url=user_img_url, user_level=user_level,
-                                   user_info = user_info,
-                                   created_topics = created_topics,
-                                   count_of_created_topics = len(created_topics),
+                                   user_info=user_info,
+                                   created_topics=created_topics,
+                                   count_of_created_topics=len(created_topics),
                                    count_of_joined_topics=len(joined_topics),
-                                   joined_topics = joined_topics,
+                                   joined_topics=joined_topics,
+                                   side_bar_list=side_bar_list
                                    )
     else:
         return render_template("user_center_voter.html", login_flag=login_flag)
@@ -508,12 +520,14 @@ def user_center_info():
                 pass
             else:
                 current_city = user_city if user_city != "" else user_district
+            side_bar_list = topic.side_bar_topic_list()
             return render_template("user_center_info.html",
                                    default_zone=default_zone,
                                    children_list=children_list,
                                    zone_dict=zone_dict, login_flag=login_flag,
                                    user_img_url=user_img_url, user_level=user_level,
-                                   user_info=user_info, current_city=current_city)
+                                   user_info=user_info, current_city=current_city,
+                                   side_bar_list=side_bar_list)
         else:
             return query_result['message']
     else:
@@ -621,8 +635,8 @@ def user_portrait_upload():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
             filepath = '../static/upload/images/' + filename
-            user.edit_user(user_id= session['user_id'],user_img_url=filepath)
-            session['user_img_url']=filepath
+            user.edit_user(user_id=session['user_id'], user_img_url=filepath)
+            session['user_img_url'] = filepath
             return filepath
         else:
             return "只允许图片类型的文件"
@@ -933,6 +947,27 @@ def view_topic(key):
     else:
         blue_width = int((support_a / join_count) * 1000) / 10
     red_width = 100 - blue_width
+    """计算争议度"""
+    val = topic_info.pop("a_vs_b")
+    val_list = val.decode(encoding='utf8').split(" vs ")
+    if len(val_list) != 2:
+        """防止新帖子查询到的值是空字符的问题"""
+        val_a = 0
+        val_b = 0
+    else:
+        val_a = int(val_list[0])
+        val_b = int(val_list[1])
+    temp_per = 0 if val_a + val_b == 0 else (val_a if val_a < val_b else val_b) / (val_a + val_b)
+    if 0.4 <= temp_per <= 0.5:
+        bomb_count = 3
+    elif 0.3 < temp_per < 0.4:
+        bomb_count = 2
+    elif temp_per <= 0.3:
+        bomb_count = 1
+    else:
+        bomb_count = 0
+    topic_info['bomb_count'] = bomb_count
+
     return render_template("detail.html", topic_info=topic_info, surplus=surplus, join_count=join_count,
                            blue_width=blue_width, red_width=red_width, all_view_count=all_view_count, form=form)
 
@@ -1015,20 +1050,27 @@ def user_comment(key):
 
 @app.route('/MP_verify_RZO0Fo2eVSv0Gt29.txt')
 def weixin_verification():
+    """用于微信服务器检测"""
     return app.send_static_file('MP_verify_RZO0Fo2eVSv0Gt29.txt')
 
 
 @app.route('/weixin_auth')
 def weixin_auth():
-    appid='wx85625e403869c2e1'
-    secret='e2bcee7ae27bd22d62ff325df122bd41'
+    """微信登录的入口"""
+    # 从微信服务器获取 access_token
+    appid = 'wx85625e403869c2e1'
+    secret = 'e2bcee7ae27bd22d62ff325df122bd41'
     code = request.args.get('code')
-    resp = requests.get('https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code'%(appid,secret,code))
+    resp = requests.get(
+        'https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code' % (
+        appid, secret, code))
     access_info = resp.json()
     access_token = access_info['access_token']
     openid = access_info['openid']
-    resp = requests.get('https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN'%(access_token,openid))
-    resp.encoding='utf-8'
+    # 利用 access_token 从微信服务器获取用户信息
+    resp = requests.get(
+        'https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN' % (access_token, openid))
+    resp.encoding = 'utf-8'
     user_info = resp.json()
     nickname = user_info['nickname']
     city = user_info['city']
@@ -1037,8 +1079,9 @@ def weixin_auth():
     sex = '男' if user_info['sex'] == 1 else '女'
     portrait = user_info['headimgurl']
 
-    check_wx_result=user.check_wx(openid)
-    if  check_wx_result['message'] == 'exists':
+    # 检查用户是否已经用微信登陆过，若有，则直接根据 open_id 填入用户名和密码自动登录，若没有，则将用户信息保留在session中，为用户注册做准备
+    check_wx_result = user.check_wx(openid)
+    if check_wx_result['message'] == 'exists':
         user_id = check_wx_result['data']['user_id']
         user_password = check_wx_result['data']['user_password']
         user_img_url = check_wx_result['data']['user_img_url']
@@ -1052,25 +1095,19 @@ def weixin_auth():
                     "create_date": current_datetime(),
                     "user_img_url": portrait,
                     "user_nickname": nickname,
-                    # "user_country" : country,
-                    # "user_province" : province,
-                    # "user_city": city,
-                    "user_sex" : sex,
-                    "user_password":'000000'}
-        # reg_args = {"user_open_id": openid,
-        #             "user_id": user_id,
-        #             "create_date": current_datetime(),
-        #             "user_nickname": nickname,
-        #             "user_sex" : '男',
-        #             "user_img_url":portrait,
-        #             "user_password":'000000'}
-        session['reg_args']=reg_args
-        session['user_open_id']=openid
-        return render_template("user_weixin_binding.html", nickname = nickname, portrait = portrait)
+                    "user_sex": sex,
+                    "user_password": '000000',
+                    "user_phone": user.generate_dumb_phone()
+                    }
+
+        session['reg_args'] = reg_args
+        session['user_open_id'] = openid
+        return render_template("user_weixin_binding.html", nickname=nickname, portrait=portrait)
 
 
-@app.route('/weixin_new_user',methods=['post'])
+@app.route('/weixin_new_user', methods=['post'])
 def weixin_new_user():
+    """微信新用户注册，使用之前存储在session中的用户信息自动注册新的用户"""
     reg_args = session['reg_args']
     result = user.add_user(**reg_args)
     if result['message'] == 'success':
@@ -1088,15 +1125,17 @@ def weixin_new_user():
 
 @app.route('/weixin_bind_phone')
 def weixin_bind_phone():
+    """微信绑定手机号的重定向"""
     return redirect(url_for("login"))
+
 
 @app.route('/t/<openid>')
 def weixin_test(openid):
     """这个方法用来在本地模拟微信接入，可以忽略不计"""
-    nickname='zhouyi'
-    check_wx_result=user.check_wx(openid)
+    nickname = 'zhouyi'
+    check_wx_result = user.check_wx(openid)
     print(json.dumps(check_wx_result))
-    if  check_wx_result['message']== 'exists':
+    if check_wx_result['message'] == 'exists':
         session["user_id"] = check_wx_result['data']['user_id']
         session["user_password"] = check_wx_result['data']['user_password']
         session["user_img_url"] = check_wx_result['data']['user_img_url']
@@ -1108,11 +1147,11 @@ def weixin_test(openid):
                     "user_id": user_id,
                     "create_date": current_datetime(),
                     "user_nickname": nickname,
-                    "user_sex" : '男',
-                    "user_img_url":'../static/image/guest.png',
-                    "user_password":'000000'}
-        session['reg_args']=reg_args
-    return render_template("user_weixin_binding.html", nickname = nickname, ttt=current_datetime())
+                    "user_sex": '男',
+                    "user_img_url": '../static/image/guest.png',
+                    "user_password": '000000'}
+        session['reg_args'] = reg_args
+    return render_template("user_weixin_binding.html", nickname=nickname, ttt=current_datetime())
 
 
 if __name__ == '__main__':

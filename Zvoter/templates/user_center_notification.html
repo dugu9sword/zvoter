@@ -73,7 +73,7 @@
                         </div>
                     </div>
 
-                    <!--最新投票结束-->
+                    <!--最新投票开始-->
                     <div class="row">
                         <div class="my_list col-lg-12 col-md-12 col-sm-12 col-xs-12">
                             <div class="list_title">最新投票</div>
@@ -88,15 +88,11 @@
                     <div class="row">
                         <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                             <ul class="my_ul">
-                                <li class="list_li">我是标是标题我是标题</li>
-                                <li class="list_li">我是标题我是标题题我是标题</li>
-                                <li class="list_li">我是标题我是标题我是标题我是标题</li>
-                                <li class="list_li">我是标题我是标题我是标题是标题</li>
-                                <li class="list_li">我是标是标题我是标题我是标题</li>
-                                <li class="list_li">我是标题我是标题我是标题</li>
-                                <li class="list_li">我是标题我是标题我是标题我是标题</li>
-                                <li class="list_li">w#######</li>
-                                <li class="list_li">我是标题我是标题题我是标题</li>
+                                {% for topic in side_bar_list %}
+                                <li class="list_li">
+                                    <a href="/detail_{{ topic.top_id }}.html">{{ topic.top_title }}</a>
+                                </li>
+                                {% endfor %}
                             </ul>
                         </div>
                     </div>
@@ -109,7 +105,7 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="my_scan col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        <div class="my_scan col-lg-6 col-md-6 col-sm-6 col-xs-6">
                             <img class="img img-responsive" src="../static/image/weixin_pic.png">
                         </div>
                     </div>
@@ -120,6 +116,17 @@
 
                 <!--中间主区域开始-->
                 <div class="col-lg-8 col-md-8 col-sm-8 col-xs-12">
+
+                    {% if count_of_notifications == 0 %}
+                        <div class="msgcount row col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            暂无消息
+                        </div>
+                    {% else %}
+                    <div class="msgcount row col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        共 {{count_of_notifications}} 条消息，其中 {{count_of_unread_notifications}} 条未读。
+                    </div>
+                    {% endif %}
+
                     {% for notification in notifications %}
                         <div class="message row col-lg-12 col-md-12 col-sm-12 col-xs-12">
                             {% if notification.read == 0 %}
