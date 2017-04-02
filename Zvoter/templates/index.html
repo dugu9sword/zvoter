@@ -38,7 +38,7 @@
                     {% endfor %}
 
                     <div class="hidden-lg hidden-md hidden-sm col-xs-3 vote_btn vote_btn_small">
-                        <a class="pop_modal">发起投票</a>
+                        <button class="pop_modal btn btn-xs btn-info">发起投票</button>
                     </div>
                 </div>
                 <hr class="nav_split_line">
@@ -247,7 +247,7 @@
                 <div class="row">
                     <div class="my_list col-lg-12 col-md-12 col-sm-12 col-xs-12">
                         <div class="list_title">最新投票</div>
-                        <div class="list_more"><a>更多 >></a></div>
+                        <div style="display: none" class="list_more"><a>更多 >></a></div>
                     </div>
                 </div>
                 <div class="row">
@@ -286,6 +286,7 @@
     </div>
 </div>
 <!--模态框开始-->
+<div id="show_vote" style="display: none">{{ show_vote }}</div>
 <a id="pop_modal" style="display: none" data-toggle="modal" data-target="#myModal">发起投票</a>
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
     <div class="modal-dialog" role="document">

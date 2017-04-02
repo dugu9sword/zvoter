@@ -5,9 +5,6 @@ import datetime
 import re
 import json
 from threading import Lock
-from socket import *
-from threading import Thread
-import signal
 
 
 def get_columns(first=False):
@@ -64,67 +61,67 @@ def get_sign(born_date):
 def check_user_args(**kwargs):
     """检查对user_info进行操作的参数，防止sql注入"""
     flag = True
-    msg = None
+    msg = ""
     columns = get_columns()
     for k, v in kwargs.items():
         if k not in columns:
             """有多余的参数"""
             flag = False
-            msg = ("有多余的参数")
+            msg = "有多余的参数"
             break
         elif k == 'user_born_date' or k == "user_address":
             result = my_db.validate_arg(v, "-")
             if not result:
                 flag = result
-                msg = ("user_born_date 或 user_address 验证失败")
+                msg = "user_born_date 或 user_address 验证失败"
                 print("user_born_date 或 user_address 验证失败")
                 break
         elif k == "create_date":
             result = my_db.validate_arg(v, "-:")
             if not result:
                 flag = result
-                msg = ("create_date 验证失败")
+                msg = "create_date 验证失败"
                 print("create_date 验证失败")
                 break
         elif k == "user_phone":
-            result = my_db.check_phone(v)
+            result = my_db.check_phone(v) or my_db.check_dumb_phone(v)
             if not result:
                 flag = result
-                msg = ("user_phone 验证失败")
+                msg = "user_phone 验证失败"
                 print("user_phone 验证失败")
                 break
         elif k == "user_nickname":
             result = my_db.validate_arg(v, "_")
             if not result:
                 flag = result
-                msg = ("user_nickname 验证失败")
+                msg = "user_nickname 验证失败"
                 print("user_nickname 验证失败")
                 break
         elif k == "user_realname":
             result = my_db.validate_arg(v, ".")
             if not result:
                 flag = result
-                msg = ("user_realname 验证失败")
+                msg = "user_realname 验证失败"
                 print("user_realname 验证失败")
                 break
         elif k == "user_img_url":
-            result = my_db.validate_arg(v, "._/-")
+            result = my_db.validate_arg(v, "._:/-")
             if not result:
                 flag = result
-                msg = ("user_img_url 验证失败")
+                msg = "user_img_url 验证失败"
                 print("user_img_url 验证失败")
                 break
         elif k == "user_mail":
             result = my_db.validate_arg(v, "._@-")
             if not result:
                 flag = result
-                msg = ("user_mail 验证失败")
+                msg = "user_mail 验证失败"
                 break
         elif k == "user_open_id":
             result = my_db.validate_arg(v, "-")
             if not result:
                 flag = result
-                msg = ("user_open_id 验证失败")
+                msg = "user_open_id 验证失败"
                 break
         else:
             result = my_db.validate_arg(v)
@@ -138,8 +135,9 @@ def add_user(**kwargs):
     """增加用户,参数必须是键值对的形式,注意，暂时没追加微信登录的方式"""
     message = {"message": "success"}
     flag, msg = check_user_args(**kwargs)
+    # flag , msg=True,""
     if not flag:
-        message["message"] = "参数错误 %s"%(msg)
+        message["message"] = "参数错误 %s" %msg
     else:
         for k, v in kwargs.items():
             if k == "user_phone" and check_phone_registered(v):
@@ -321,87 +319,35 @@ def check_phone_registered(phone):
         session.close()
 
 
-# 获取伪电话号码分为两个模块:服务器模块和客户端模块,客户端向服务器请求电话号码,采取socket进行通信
-# 服务器模块通过端口号的唯一占用,保证进程的唯一性.客户端可以由任意多个进程和任意多个线程使用
-# 可能出现的故障:
-# 如果测试该函数,在函数结束后,端口仍处于TCP的TIME-WAIT状态.这时候如果立刻进行第二次测试,会出现端口号
-# 占用报错.因此需要等待一会儿(端口释放),或者暂时修改端口号.
-PORT = 23333
-
-class DumbPhoneServer(Thread):
-    dumb_phone_lock=Lock()
-
-    def __init__(self):
-        """如果端口已经被占用，那么就放弃该服务器"""
-        Thread.__init__(self)
-        try:
-            self.ss = socket(AF_INET, SOCK_STREAM)
-            self.ss.bind(('',PORT))
-            self.daemon = True
-            session = my_db.sql_session()
-            sql = "SELECT MAX(user_phone) FROM zvoter.user_info"
-            result = session.execute(sql)
-            if result is not None:
-                maxphone = int(result.fetchone()[0])
-            self.dumb_phone_num = 90000000000 if 90000000000 > maxphone else maxphone
-        except:
-            self.ss = None
-            print("port already in use.")
-
-    def run(self):
-        if self.ss is not None:
-            self.ss.listen()
-            while True:
-                # 服务器轮询
-                s, _ = self.ss.accept()
-                Thread(target=self.send_num, args=(s,)).start()
-
-    def send_num(self, socket):
-        """连接客户端并发送假电话号码"""
-        self.dumb_phone_lock.acquire()
-        self.dumb_phone_num += 1
-        to_send=self.dumb_phone_num
-        self.dumb_phone_lock.release()
-        socket.send(b'%d'%(to_send))
-        socket.close()
-
-
 def generate_dumb_phone():
     """生成一个占位用的电话号码，从90000000000开始生成"""
-    s = socket(AF_INET, SOCK_STREAM)
-    # s.settimeout(1)
-    s.connect(('localhost', PORT))
-    data = int(s.recv(16))
-    return data
+    return dumb_phone_generator.next_phone_num()
 
 
-dumb_phone_server = DumbPhoneServer()
-dumb_phone_server.start()
+class DumbPhoneGenerator:
+    """伪手机号码生成器"""
+    dumb_phone_num = 90000000000
+    dumb_phone_lock = Lock()
 
-# class DumbPhoneGenerator:
-#     """伪手机号码生成器"""
-#     dumb_phone_num = 90000000000
-#     dumb_phone_lock = Lock()
-#
-#     def __init__(self):
-#         """使用数据库中最大的手机号码初始化内部存储的伪手机号码值"""
-#         session = my_db.sql_session()
-#         sql = "SELECT MAX(user_phone) FROM zvoter.user_info"
-#         result = session.execute(sql)
-#         if result is not None:
-#             maxphone = int(result.fetchone()[0])
-#             if self.dumb_phone_num < maxphone:
-#                 self.dumb_phone_num = maxphone
-#
-#     def next_phone_num(self):
-#         """生成下一个伪手机号码"""
-#         self.dumb_phone_lock.acquire()
-#         self.dumb_phone_num += 1
-#         value_to_return = self.dumb_phone_num
-#         self.dumb_phone_lock.release()
-#         return value_to_return
+    def __init__(self):
+        """使用数据库中最大的手机号码初始化内部存储的伪手机号码值"""
+        session = my_db.sql_session()
+        sql = "SELECT MAX(user_phone) FROM zvoter.user_info"
+        result = session.execute(sql)
+        if result is not None:
+            maxphone = int(result.fetchone()[0])
+            if self.dumb_phone_num < maxphone:
+                self.dumb_phone_num = maxphone
 
-##################################################
+    def next_phone_num(self):
+        """生成下一个伪手机号码"""
+        self.dumb_phone_lock.acquire()
+        self.dumb_phone_num += 1
+        value_to_return = self.dumb_phone_num
+        self.dumb_phone_lock.release()
+        return value_to_return
+
+dumb_phone_generator = DumbPhoneGenerator()
 
 def check_wx(user_open_id):
     """根据用户微信id和密码获取信息"""
@@ -493,12 +439,6 @@ def page(index=1, length=30):
 
 # print(page(1, 30))
 # print(login("15618317376", ""))
-# print(add_user(user_id='20121457894123456279',user_phone='15618311366',user_password="",create_date='2917-01-01'))
+# print(add_user(user_id='20121457894123456289',user_phone='15618311366',user_password="",create_date='2017-01-01'))
 # print(edit_user(user_id='20121457894123456789',user_phone='15618317376',user_password="12",create_date='2917-01-01'))
 # print(change_status("delete",'20121457894123456789'))
-# print(generate_dumb_phone())
-# import _thread, time
-# for i in range(10000):
-#     _thread.start_new_thread(generate_dumb_phone,())
-# time.sleep(5)
-# print(generate_dumb_phone())

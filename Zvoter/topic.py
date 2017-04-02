@@ -116,31 +116,19 @@ def manage_topic_admin(**kwargs):
                 message['message'] = "数据库执行错误"
                 print(e)
 
-        elif the_type == "up":
-            """话题对用户可见"""
+        elif the_type == "status":
+            """话题状态的调整，审核/拒绝/置顶等"""
             try:
                 top_id = kwargs.pop("top_id")
-                sql = "update topic_info set can_show=1 where top_id={}".format(top_id)
+                topic_status = kwargs.pop("topic_status")
+                sql = "update topic_info set can_show={} where top_id={}".format(topic_status, top_id)
                 sql_session.execute(sql)
                 sql_session.commit()
             except KeyError:
-                message['message'] == '错误的话题id'
+                message['message'] = '错误的话题id'
             except Exception as e:
-                message['message'] = "数据库执行错误"
                 print(e)
-
-        elif the_type == "down":
-            """话题对用户不可见"""
-            try:
-                top_id = kwargs.pop("top_id")
-                sql = "update topic_info set can_show=0 where top_id={}".format(top_id)
-                sql_session.execute(sql)
-                sql_session.commit()
-            except KeyError:
-                message['message'] == '错误的话题id'
-            except Exception as e:
                 message['message'] = "数据库执行错误"
-                print(e)
 
         elif the_type == "single":
             """根据id获取单个话题的内容"""
@@ -191,7 +179,8 @@ def manage_topic_admin(**kwargs):
             except ValueError:
                 message['message'] = "无效的页码或者步长"
 
-    except KeyError:
+    except KeyError as e:
+        print(e)
         message['message'] = "不理解的操作"
     except Exception as e:
         print(e)

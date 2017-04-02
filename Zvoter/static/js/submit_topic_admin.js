@@ -125,35 +125,41 @@ $(function () {
         }
     });
 
-    // 审核帖子
-    up_topic = function($obj){
-        var top_id = $obj.parents(".my_topic:first").attr("id").split("id_")[1];
-        $.post("/manage_topic/up_topic", {"top_id": top_id, "the_type": "up"},function(data){
+    // 编辑帖子状态函数
+    function change_status($obj){
+        var topic_status = $.trim($obj.attr("data-status"));
+        var topic_text = $.trim($obj.text());
+        var current_obj = $obj.parents("tr:first").find(".current_status");
+        var topic_id = $obj.parents("tr:first").attr("id").split("_")[1];
+        var args = {
+            "topic_status": topic_status,
+            "top_id": topic_id
+        };
+        $.post("/manage_topic/status", args, function(data){
             var data = JSON.parse(data);
-            if(data['message'] == "success"){
-                alert("审核成功");
-                location.href = location.href;
+            if(data['message'] == 'success'){
+                current_obj.html(topic_text + "<span class='caret'></span>");
+                current_obj.css("color", get_color(topic_status));
             }
             else{
                 alert(data['message']);
             }
         });
-    };
+    }
 
-    // 停用帖子
-    down_topic = function($obj){
-        var top_id = $obj.parents(".my_topic:first").attr("id").split("id_")[1];
-        $.post("/manage_topic/down_topic", {"top_id": top_id, "the_type": "down"},function(data){
-            var data = JSON.parse(data);
-            if(data['message'] == "success"){
-                alert("停用成功");
-                location.href = location.href;
-            }
-            else{
-                alert(data['message']);
-            }
-        });
-    };
+    // 审核帖子触发事件。
+    $("#select_status a").click(function(){
+        var $this = $(this);
+        var selected_text = $.trim($this.text());
+        var current_obj = $this.parents("tr:first").find(".current_status");
+        if(selected_text != $.trim(current_obj.text())){
+            // 提交审核事件
+            change_status($this);
+        }
+        else{
+            // nothing...
+        }
+    });
 
     // 删除帖子
     drop_topic = function($obj){

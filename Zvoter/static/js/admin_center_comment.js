@@ -2,13 +2,13 @@ $(function () {
     // 启动时渲染状态颜色
     $(".current_status").each(function(){
         var $this = $(this);
-        var current_status = $.trim($this.attr("data_status"));
+        var current_status = $.trim($this.attr("data-status"));
         $this.css("color", get_color(current_status));
     });
 
     // 审核事件
     function change_status($obj){
-        var comment_status = $.trim($obj.attr("data_status"));
+        var comment_status = $.trim($obj.attr("data-status"));
         var comment_text = $.trim($obj.text());
         var current_obj = $obj.parents("tr:first").find(".current_status");
         var comment_id = $obj.parents("tr:first").attr("id").split("_")[1];
@@ -29,7 +29,7 @@ $(function () {
     }
 
     // 审核动作
-    $("#select_status a").click(function(){
+    $(".select_status a").click(function(){
         var $this = $(this);
         var selected_text = $.trim($this.text());
         var current_obj = $this.parents("tr:first").find(".current_status");

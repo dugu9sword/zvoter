@@ -36,7 +36,7 @@
 .sort_select_area{
     text-align: center;
 }
-#sort_select_btn{
+.sort_select_btn{
     font-size:14px;
     color:rgba(78,183,205,1);
 }
@@ -131,7 +131,28 @@
 .topic_row{
     padding-bottom:35px;
 }
+#voter_btn_small,#sort_select_btn2{
+    display:none;
+}
 /*调整单元的样式*/
 .my_item{
     padding:0rem 4rem;
+}
+.order_by_select{
+    /*line-height: 6em;*/
+    text-align: center;
+}
+.flow_nav{
+    display:block;
+    text-align: center;
+    margin-right:0em;
+}
+.voter_btn_big{
+    text-align: center;
+}
+/*调整小屏幕下的导航的行高*/
+@media screen and (max-width: 500px){
+    .nav_main{
+        line-height:2em !important;
+    }
 }

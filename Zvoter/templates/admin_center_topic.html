@@ -39,11 +39,30 @@
                     <td style="display: none" class="img_url_b">{{ topic.img_url_b }}</td>
                     <td  class="create_date">{{ topic.create_date }}</td>
                     <td class="can_show" data-val="{{ topic.can_show }}">
-                        {% if topic.can_show == 1 %}
-                        <button class="btn btn-default btn-xs" onclick="down_topic($(this))">已审核</button>
-                        {% else %}
-                        <button class="btn btn-default btn-xs" onclick="up_topic($(this))">待审核</button>
-                        {% endif %}
+
+                        <div class="dropdown">
+                            <button data-status="{{ topic.can_show  }}" class="btn btn-default btn-sm
+                             dropdown-toggle current_status" type="button"
+                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                {% if topic.can_show == 0 %}
+                                未审核
+                                {% elif topic.can_show == 1 %}
+                                已审核
+                                {% elif topic.can_show == -1 %}
+                                驳回
+                                {% else %}
+                                置顶
+                                {% endif %}
+                                <span class="caret"></span>
+                            </button>
+                            <ul id="select_status" class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                <li><a href="javascript:;" data-status="0">未审核</a></li>
+                                <li><a href="javascript:;" data-status="1">已审核</a></li>
+                                <li><a href="javascript:;" data-status="-1">驳回</a></li>
+                                <li><a href="javascript:;" data-status="2">置顶</a></li>
+                            </ul>
+                        </div>
+
                     </td>
                     <td style="display: none" class="begin_date">{{ "" if topic.begin_date == "" else topic.begin_date }}</td>
                     <td style="display: none" class="end_date">{{ "" if topic.end_date == "" else topic.end_date }}</td>

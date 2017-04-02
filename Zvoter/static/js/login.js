@@ -72,16 +72,24 @@ $(function () {
 
 
     // 提交事件
+     var referrer = document.referrer;
+     console.log(referrer);
+     if(referrer.indexOf(location.host) != -1){
+         referrer = referrer.replace("http://" + location.host, ""); // 说明是本站的referrer
+     }
+     else{
+         referrer = "/";
+     }
+
     $("#submit_btn").click(function () {
         if (check_form()) {
             var phone = $.trim($("#phone").val());
             var user_password = $.trim($("#password").val());
             var img_code = $.trim($("#sms_code").val());  // 图形验证码
             var csrf_token = $("#csrf_token").val();
-            // var referrer = document.referrer;
             var args = {
                 "phone": phone, "user_password": user_password,
-                "img_code": img_code, "csrf_token": csrf_token
+                "img_code": img_code, "csrf_token": csrf_token, "referrer": referrer
             };
             $("#submit_btn").prop("disabled","disabled");
             $.post("/login", args, function (data) {
@@ -93,7 +101,7 @@ $(function () {
                     return false;
                 }
                 else {
-                    location.href = before_url;
+                    location.href = referrer;
                 }
             });
         }

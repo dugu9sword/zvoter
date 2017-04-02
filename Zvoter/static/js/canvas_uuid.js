@@ -18,7 +18,8 @@ $(function(){
     ctx.fillText(txt, 4, 17);
     var b64 = canvas.toDataURL().replace("data:image/png;base64,","");
     canvas_uuid = b64.slice(-32);
-    var topic_id = $("#current_topic_id").text();
+    var topic_id = $.trim($("#current_topic_id").text());
+    topic_id = topic_id == "" ? location.pathname : topic_id;
     $.get("/view_count?uuid="+Math.random()+"&canvas_uuid="+canvas_uuid+"&topic_id="+topic_id, function(data){
         //打开页面时，进行浏览计数
     });

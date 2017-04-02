@@ -19,6 +19,7 @@ import vote_tools
 import notification
 import banner_manage
 import comment
+import logging
 
 port = 5666  # 定义端口
 app = Flask(__name__)
@@ -43,6 +44,11 @@ SESSION_TYPE = 'redis'  # flask-session使用redis，注意必须安装redis数�
 app.config.from_object(__name__)  # flask-session相关
 Session(app)  # flask-session相关
 
+# """日志相关"""
+# app.debug = True
+# handler = logging.FileHandler('flask.log')
+# app.logger.addHandler(handler)
+# app.logger.info('/home/root/Hello Log')
 
 # cache = RedisCache()  # my_tools里面有，所以这里注销了。
 
@@ -92,6 +98,7 @@ def index_page():
 
 @app.route('/')
 def index():
+    from_ip = get_real_ip(request)
     """返回首页"""
     login_flag = is_login(session)  # 用户是否已登录
     channel_list = channel.channel_list()  # 频道列表
@@ -101,6 +108,11 @@ def index():
     index_dict = topic.index_topic_list()  # 首页帖子字典
     side_bar_list = topic.side_bar_topic_list()  # 侧边栏的列表
     banner_list = banner_manage.get_banner()  # banner列表
+    if "show_vote" in session.keys():
+        show_vote = "yes"
+        session.pop("show_vote")
+    else:
+        show_vote = "no"
     if login_flag:
         try:
             user_img_url = session['user_img_url']
@@ -109,14 +121,15 @@ def index():
         # 用户头像
         user_img_url = '../static/image/guest.png' if user_img_url == "" else session['user_img_url']
         user_level = 1  # 用户级别，暂时替代
+        user_nickname = session['user_nickname']
         return render_template("index.html", login_flag=login_flag, side_bar_list=side_bar_list,
                                user_img_url=user_img_url, user_level=user_level, banner_list=banner_list,
-                               channel_list=channel_list, channel_dict=channel_dict,
-                               form=form, img_form=img_form, index_dict=index_dict)
+                               channel_list=channel_list, channel_dict=channel_dict, user_nickname=user_nickname,
+                               form=form, img_form=img_form, index_dict=index_dict, show_vote=show_vote)
     else:
         return render_template("index.html", login_flag=login_flag, channel_dict=channel_dict,
                                channel_list=channel_list, index_dict=index_dict, side_bar_list=side_bar_list,
-                               form=form, img_form=img_form, banner_list=banner_list)
+                               form=form, img_form=img_form, banner_list=banner_list , show_vote=show_vote)
 
 
 @app.route("/class_dict", methods=['post'])
@@ -178,12 +191,12 @@ def my_channel(channel_id):
             user_img_url = ""
         user_img_url = '../static/image/guest.png' if user_img_url == "" else session['user_img_url']
         user_level = 1  # 暂时替代用户等级
-
+        user_nickname = session['user_nickname']
         return render_template("channel.html", login_flag=login_flag, channel_list=channel_list,
                                current_channel_name=channel_name, class_list=class_list,
                                current_channel_id=channel_id, current_class_id=current_class_id,
                                topic_list=topic_list, user_level=user_level, user_img_url=user_img_url,
-                               form=form)
+                               form=form, user_nickname=user_nickname)
 
     else:
         return render_template("channel.html", login_flag=login_flag, channel_list=channel_list,
@@ -202,11 +215,36 @@ def my_detail(key):
         abort(404)
     else:
         topic_info = result['data']  # 投票信息
-        comment_list = comment.manage_comment(the_type="by_topic_id", topic_id=key)  # 评论
+        a_count, b_count = comment.comment_count(key)  # 此话题全部评论
+        comment_list = comment.manage_comment(the_type="by_topic_id", topic_id=key)  # 评论,只有直接对帖子的评论
         surplus = surplus_datetime(topic_info['end_date'])  # 剩余时间
-        up_a_list = list()
-        up_b_list = list()
-
+        comment_list = comment_list['data']
+        """先区分主回复和子回复"""
+        parent_list = list()
+        children_list = list()
+        for x in comment_list:
+            if x['parent_comment'] == 0:
+                x['children'] = []
+                parent_list.append(x)
+            else:
+                children_list.append(x)
+        """把子回复插入道父回复之中"""
+        parent_dict = {x['comment_id']: x for x in parent_list}
+        for x in children_list:
+            parent_comment_id = x['parent_comment']
+            if parent_comment_id in parent_dict.keys():
+                parent_dict[parent_comment_id]['children'].append(x)
+            else:
+               raise KeyError("无主的子评论：{}".format(str(x)))
+        parent_list = list(parent_dict.values())
+        up_a_list = list()  # 支持a的评论
+        up_b_list = list()  # 支持a的评论
+        """先取出直接对帖子进行的评论分类"""
+        for x in parent_list:
+            if x['support_side'] == "a":
+                up_a_list.append(x)
+            else:
+                up_b_list.append(x)
         all_view_count = vote_tools.get_view_count(topic_id=key)  # 浏览总数
         query_vote = vote_tools.get_vote_count(key)  # 查询　投票人数
         support_a = query_vote['support_a']
@@ -221,7 +259,7 @@ def my_detail(key):
 
         """计算争议度"""
         val = topic_info.pop("a_vs_b")
-        val_list = val.decode(encoding='utf8').split(" vs ")
+        val_list = val.split(" vs ")
         if len(val_list) != 2:
             """防止新帖子查询到的值是空字符的问题"""
             val_a = 0
@@ -248,16 +286,41 @@ def my_detail(key):
                 user_img_url = ""
             user_img_url = '../static/image/guest.png' if user_img_url == "" else session['user_img_url']
             user_level = 1  # 暂时替代
-
+            user_nickname = session['user_nickname']
             return render_template("detail.html", topic_info=topic_info, surplus=surplus, join_count=join_count,
                                    blue_width=blue_width, red_width=red_width, all_view_count=all_view_count, form=form,
                                    login_flag=login_flag, user_img_url=user_img_url, user_level=user_level,
-                                   side_bar_list=side_bar_list)
+                                   side_bar_list=side_bar_list, up_a_list=up_a_list, up_b_list=up_b_list,
+                                   a_count=a_count, b_count=b_count, user_nickname=user_nickname)
 
         else:
             return render_template("detail.html", topic_info=topic_info, surplus=surplus, join_count=join_count,
                                    blue_width=blue_width, red_width=red_width, all_view_count=all_view_count, form=form,
-                                   login_flag=login_flag, side_bar_list=side_bar_list)
+                                   login_flag=login_flag, side_bar_list=side_bar_list, up_a_list=up_a_list,
+                                   up_b_list=up_b_list, a_count=a_count, b_count=b_count)
+
+
+@app.route("/detail_api/<key>", methods=['post', 'get'])
+def detail_api(key):
+    """用户详细页的各种操作接口"""
+    message = {"message": "success"}
+    if key == "up_down":
+        """赞和踩的操作"""
+        args = get_args(request)
+        try:
+            user_id = session['user_id']
+        except KeyError:
+            user_id = ''
+        from_ip = get_real_ip(request)
+        browser_type = get_user_agent(request)
+        args['user_id'] = user_id
+        args['from_ip'] = from_ip
+        args['browser_type'] = browser_type
+        result = comment.up_down(**args)
+        message = result
+    else:
+        message['message'] = "错误的请求"
+    return json.dumps(message)
 
 
 @app.route("/login", methods=['post', 'get'])
@@ -274,17 +337,17 @@ def my_login():
         print("base_url = {}".format(base_url))
         print("referrer = {}".format(referrer))
         print("url_path = {}".format(url_path))
-        redirect_url = None
-        if referrer is None:  # 直接打开页面
-            pass
-        elif referrer == host_url or referrer == base_url:  # 刷新页面
-            pass
-        elif referrer.find(host_url) != -1 and request.args.get("ref") is None:  # 有本站的referrer的情况
-            redirect_url = referrer.replace(host_url, "/")
-            redirect_url = base64.b64encode(redirect_url.encode("utf8"))
-            return redirect(url_for("my_login", ref=redirect_url))
-        else:
-            pass
+        # redirect_url = None
+        # if referrer is None:  # 直接打开页面
+        #     pass
+        # elif referrer == host_url or referrer == base_url:  # 刷新页面
+        #     pass
+        # elif referrer.find(host_url) != -1 and request.args.get("ref") is None:  # 有本站的referrer的情况
+        #     redirect_url = referrer.replace(host_url, "/")
+        #     redirect_url = base64.b64encode(redirect_url.encode("utf8"))
+        #     return redirect(url_for("my_login", ref=redirect_url))
+        # else:
+        #     pass
         """真正的get视图函数开始"""
         show_img_code = 0  # 是否显示图形验证码
         login_flag = is_login(session)  # 用户是否已登录
@@ -311,9 +374,10 @@ def my_login():
                 user_id = result['data']['user_id']
                 user_level = 1
                 user_img_url = result['data']['user_img_url']
+                user_nickname = result['data']['user_nickname']
                 if 'user_open_id' in session.keys():
                     user.edit_user(user_id=user_id, user_open_id=session['user_open_id'])
-                set_user_login_info(session, user_id, user_password, user_img_url, user_level)
+                set_user_login_info(session, user_id, user_nickname, user_password, user_img_url, user_level)
                 message = result
 
             else:
@@ -324,6 +388,8 @@ def my_login():
                     pass
                 finally:
                     message = result
+        else:
+            pass
         return json.dumps(message)
 
 
@@ -376,7 +442,8 @@ def my_register():
                     user_id = user_id
                     user_level = 1  # 临时替代
                     user_img_url = '../static/image/guest.png'
-                    set_user_login_info(session, user_id, user_password, user_img_url, user_level)
+                    user_nickname = '新用户'
+                    set_user_login_info(session, user_id, user_nickname, user_password, user_img_url, user_level)
                     message = result
 
                 else:
@@ -858,25 +925,15 @@ def manage_handler(key1, key2):
                     arg_dict[key] = temp
             result = topic.manage_topic_admin(**arg_dict)
             return json.dumps(result)
-        elif key2 == "up_topic":
-            """审核帖子"""
+        elif key2 == "status":
+            """对话题状态的调整，审核/拒绝/置顶等"""
             the_form = request.form
             arg_dict = dict()
             for key in the_form.keys():
                 temp = the_form[key]
                 if temp is not None:
                     arg_dict[key] = temp
-            result = topic.manage_topic_admin(**arg_dict)
-            return json.dumps(result)
-
-        elif key2 == "down_topic":
-            """停用帖子"""
-            the_form = request.form
-            arg_dict = dict()
-            for key in the_form.keys():
-                temp = the_form[key]
-                if temp is not None:
-                    arg_dict[key] = temp
+            arg_dict['the_type'] = key2
             result = topic.manage_topic_admin(**arg_dict)
             return json.dumps(result)
 
@@ -1061,6 +1118,7 @@ def weixin_auth():
     appid = 'wx85625e403869c2e1'
     secret = 'e2bcee7ae27bd22d62ff325df122bd41'
     code = request.args.get('code')
+    state = request.args.get('state')
     resp = requests.get(
         'https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code' % (
         appid, secret, code))
@@ -1081,13 +1139,25 @@ def weixin_auth():
 
     # 检查用户是否已经用微信登陆过，若有，则直接根据 open_id 填入用户名和密码自动登录，若没有，则将用户信息保留在session中，为用户注册做准备
     check_wx_result = user.check_wx(openid)
+    # return json.dumps(check_wx_result)
+    # if check_wx_result['message'] == 'exists':
+    #     return redirect(url_for("index"))
+    # else:
+    #     return check_wx_result
     if check_wx_result['message'] == 'exists':
         user_id = check_wx_result['data']['user_id']
         user_password = check_wx_result['data']['user_password']
         user_img_url = check_wx_result['data']['user_img_url']
+        user_nickname = check_wx_result['data']['user_nickname']
         user_level = 1
-        set_user_login_info(session, user_id, user_password, user_img_url, user_level)
-        return redirect(url_for("index"))
+        set_user_login_info(session, user_id, user_nickname, user_password, user_img_url, user_level)
+        if state=="001":
+            return redirect(url_for("index"))
+        elif state=="002":
+            return redirect(url_for("user_center_voter"))
+        elif state=="003":
+            session["show_vote"] = "true"
+            return redirect(url_for("index"))
     else:
         user_id = get_only_id()
         reg_args = {"user_open_id": openid,
@@ -1110,12 +1180,14 @@ def weixin_new_user():
     """微信新用户注册，使用之前存储在session中的用户信息自动注册新的用户"""
     reg_args = session['reg_args']
     result = user.add_user(**reg_args)
+    # return json.dumps(result)
     if result['message'] == 'success':
         user_id = reg_args['user_id']
         user_level = 1  # 临时替代
         user_img_url = reg_args['user_img_url']
         user_password = reg_args['user_password']
-        set_user_login_info(session, user_id, user_password, user_img_url, user_level)
+        user_nickname = reg_args['user_nickname']
+        set_user_login_info(session, user_id, user_nickname, user_password, user_img_url, user_level)
         message = {"message": "success"}
     else:
         message = {"message": "failed"}

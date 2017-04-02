@@ -36,7 +36,7 @@
 
                     <td class="comment_status">
                         <div class="dropdown">
-                            <button data_status="{{ comment.comment_status }}" class="btn btn-default btn-sm
+                            <button data-status="{{ comment.comment_status }}" class="btn btn-default btn-sm
                              dropdown-toggle current_status" type="button"
                                     data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                 {% if comment.comment_status == 0 %}
@@ -50,11 +50,11 @@
                                 {% endif %}
                                 <span class="caret"></span>
                             </button>
-                            <ul id="select_status" class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                <li><a href="javascript:;" data_status="0">待审核</a></li>
-                                <li><a href="javascript:;" data_status="-1">拒绝</a></li>
-                                <li><a href="javascript:;" data_status="1">已通过</a></li>
-                                <li><a href="javascript:;" data_status="2">置顶</a></li>
+                            <ul class="dropdown-menu select_status" aria-labelledby="dropdownMenu1">
+                                <li><a href="javascript:;" data-status="0">待审核</a></li>
+                                <li><a href="javascript:;" data-status="-1">拒绝</a></li>
+                                <li><a href="javascript:;" data-status="1">已通过</a></li>
+                                <li><a href="javascript:;" data-status="2">置顶</a></li>
                             </ul>
                         </div>
                     </td>

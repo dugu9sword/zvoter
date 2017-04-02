@@ -2,6 +2,30 @@
 
 # LOG
 
+*update 2017/4/2*
+
+1. flask_server.py 中的 my_register 添加默认用户昵称否则, 修改了 weixin_auth, weixin_new_user 两个函数
+2. my_db.py 中添加手机号码验证 check_dumb_phone，允许 900 开头
+3. user.py 中修改 check_user_args, 手机号码允许伪号码
+4. 微信中要能够点击某按钮进入主页并打开投票窗口，因此，
+   - 修改 index.html，“模态框开始”部分添加了 show_vote 这个 div
+   - index.js 中添加了对 show_vote 这个div 的检测，用于是否开启投票弹窗
+   - flask_server.py 中的 index 函数中，开启了对 session["show_vote"] 的检测
+
+
+
+*update 2017/3/25*
+
+**该代码并未被合并到服务器** 
+
+提交版本号：8c8bffe
+
+在 user.py 文件中添加 DumbPhoneServer 类。
+
+获取伪电话号码分为两个模块:服务器模块和客户端模块,客户端向服务器请求电话号码,采取socket进行通信，服务器模块通过端口号的唯一占用,保证进程的唯一性.客户端可以由任意多个进程和任意多个线程使用。可能出现的故障:如果测试该函数,在函数结束后,端口仍处于TCP的TIME-WAIT状态.这时候如果立刻进行第二次测试,会出现端口号占用报错.因此需要等待一会儿(端口释放),或者暂时修改端口号。
+
+
+
 *update 2017/3/25*
 
 
@@ -17,7 +41,6 @@
 
 1. 修改 flask_server 中的 /weixin_auth 和 /weixin_new_user，添加部分注释，修正部分代码
 2. 在 user.py 中添加 DumbPhoneGenerator 类，全局的实例 dumb_phone_generator = DumbPhoneGenerator()，和 generate_dumb_phone() 函数，用于生成占位用的手机号码。
-
 
 
 ---

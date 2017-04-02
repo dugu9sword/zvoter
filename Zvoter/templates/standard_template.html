@@ -8,6 +8,8 @@
     <script src="../static/js/jquery-1.11.3.min.js"></script>
     <script src="../static/js/bootstrap.min.js"></script>
     <script src="../static/js/common.js"></script>
+    <!-- 指纹 -->
+    <script src="../static/js/canvas_uuid.js"></script>
     <!--顶部搜索框脚本-->
     {% block top_search_script %}
         <link rel="stylesheet" href="../static/css/top_search.css">
@@ -38,16 +40,16 @@
     <div class="row top_search_row">
         <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 col-sm-12 col-xs-12">
             <div class="row">
-                <div class="col-lg-2 col-md-2 col-sm-2 hidden-xs">
+                <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2 logo_parent">
                     <img id="logo" class="img to_index" src="../static/image/logo.png">
                 </div>
                 {% block custom_search_width %}
-                <div class="col-lg-8 col-md-8 col-sm-8 col-xs-10">
+                <div class="col-lg-8 col-md-8 col-sm-8 col-xs-8">
                 {% endblock %}
                     <!--搜索框-->
-                    <div class="col-lg-9 col-lg-offset-2 col-md-9 col-md-offset-2 col-sm-10 col-sm-offset-1 col-xs-12">
+                    <div class="col-lg-11 col-lg-offset-1 col-md-11 col-md-offset-1 col-sm-12 col-xs-12">
                         <div class="row">
-                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 search_form_parent">
                                 <div class="input-group my_search_form">
                                     <input id="my_search_word" type="text" class="form-control my_nav_round" placeholder="春晚投票">
                                 <span class="input-group-btn">
@@ -93,7 +95,7 @@
                     </div>
 
                     <div class="row">
-                        <div  class="reg_tips_area col-lg-12 col-md-12 col-sm-12 hidden-xs">
+                        <div  class="reg_tips_area col-lg-12 col-md-12 col-sm-12 col-xs-12">
                          <div id="reg_tips" class="row text-center">
                              <div style="white-space: nowrap;overflow: hidden;text-align:center;margin-top:0.5em" class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <a id="reg_gift" href="/register" class="">注册</a>
@@ -107,9 +109,12 @@
                                 <div>
                                     <img class="img img-circle" id="login_user_pic" src="{{ user_img_url }}">
                                 </div>
+                                <div id="user_nickname">{{ user_nickname }}</div>
+                                <!--
                                 <div id="user_level" >
                                 LV {{ user_level }}
                                 </div>
+                                -->
                                 <div id="login_out">
                                 <a href="/login_out">注销</a>
                             </div>
@@ -134,30 +139,25 @@
         <div class="my_bottom_middle col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 col-sm-12 hidden-xs">
             <div class="row">
                 <!--左侧-->
-                <div class="col-lg-4 col-md-4 col-sm-4 col-xs-4">
+                <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
                     <div class="row">
                         <div class="bottom_title col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                            联系方式
+                            关于我们
                         </div>
                     </div>
                     <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * 电话： 021-55668845
+                        <div class="bottom_text col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            有趣的众投票
                         </div>
                     </div>
                     <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * 地址： 上海市杨浦区xxx路xx创业园x楼x幢808室
+                        <div class="bottom_text col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            众投票文化
                         </div>
                     </div>
                     <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * 企业邮箱： welcome@zvoter.com
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                           * 在线QQ： 456784236   47235462
+                        <div class="bottom_text col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            加入我们
                         </div>
                     </div>
                 </div>
@@ -166,27 +166,27 @@
                 <div class="col-lg-4 col-md-4 col-sm-4 col-xs-4">
                     <div class="row">
                         <div class="bottom_title col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                           关于我们
+                           联系方式
                         </div>
                     </div>
                     <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * 企业文化
+                        <div class="bottom_text col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            合作邮箱： service@zvoter.com
                         </div>
                     </div>
                     <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * 公司宗旨
+                        <div class="bottom_text col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            在线QQ： 2590559629
                         </div>
                     </div>
                     <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * 我们的最终目标
+                        <div class="bottom_text col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            备案信息  沪ICP备12015359号-8
                         </div>
                     </div>
                     <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                           * 加入我们
+                        <div class="bottom_text col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                           版权所有，侵权必究
                         </div>
                     </div>
                 </div>
@@ -195,27 +195,12 @@
                 <div class="col-lg-4 col-md-4 col-sm-4 col-xs-4">
                     <div class="row">
                         <div class="bottom_title col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                           版权信息
+                           扫一扫
                         </div>
                     </div>
                     <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * 版权所有   上海市 xxx公司
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * 工商备案许可证
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                            * ICP备案信息  沪备字 2453541-1
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="bottom_text col-lg-8 col-lg-offset-4 col-md-8 col-lg-offset-4 col-sm-12 col-xs-12">
-                           * 版权所有，侵权必究
+                        <div class="bottom_img col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            <img class="img img-responsive" src="../static/image/weixin_pic.png">
                         </div>
                     </div>
                 </div>

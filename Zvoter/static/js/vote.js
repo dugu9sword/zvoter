@@ -54,6 +54,14 @@ $(function(){
         });
     };
 
+    // 输入框点击事件
+    $("#my_message").click(function(){
+        if(!login_flag){
+            alert("吐槽请先登录");
+            $("#jump_edit_area").click();
+        }
+    });
+
     // 用户留言
     $("#submit_btn").click(function(){
         var comment_text = $.trim($("#my_message").val());
@@ -81,6 +89,26 @@ $(function(){
 
         }
     });
+
+    // 绑定赞和踩事件
+    $(".beat_it").click(function(){
+        up_down($(this));
+    });
+
+    // 赞和踩的函数
+    up_down = function(obj){
+        var side = $.trim(obj.attr('data-side'));
+        var comment_id = $.trim(obj.attr("data-id"));
+        var url = "/detail_api/up_down";
+        var args = {"up_down_str": side, "comment_id": comment_id, "only_id": canvas_uuid};
+        $.post(url,args, function(data){
+            var data = JSON.parse(data);
+            if(data['message'] == 'success'){
+                var n = parseInt($.trim(obj.next().text()));
+                obj.next().text(n + 1);
+            }else{}
+        });
+    };
 
     //end！
 });

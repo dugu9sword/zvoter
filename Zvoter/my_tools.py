@@ -23,7 +23,6 @@ import os
 cache = RedisCache()
 WTF_CSRF_SECRET_KEY = os.urandom(24)
 
-
 """工具方法和类定义开始"""
 
 
@@ -69,9 +68,10 @@ def is_login(my_session):
         return 0
 
 
-def set_user_login_info(my_session, user_id, user_password, user_img_url, user_level):
+def set_user_login_info(my_session, user_id, user_nickname, user_password, user_img_url, user_level):
     """用户注册或登录成功后，把用户信息加入缓存"""
     my_session["user_id"] = user_id
+    my_session["user_nickname"] = user_nickname
     my_session["user_password"] = user_password
     my_session["user_img_url"] = user_img_url
     my_session["user_level"] = user_level
@@ -142,8 +142,8 @@ def get_admin_login_info(my_session):
 
 class PhotoForm(FlaskForm):
     """文件上传的子类"""
-    photo = FileField('photo',validators=[FileRequired(),
-                                          FileAllowed(['png','jpg', 'jpeg'], "只能上传图片")])
+    photo = FileField('photo', validators=[FileRequired(),
+                                           FileAllowed(['png', 'jpg', 'jpeg'], "只能上传图片")])
     submit_img_button = SubmitField("submit_img_button")
 
 
@@ -166,6 +166,7 @@ class SearchLoginForm(FlaskForm):
 
 class RequestLoginForm(FlaskForm):
     """自定义一个Form的子类，为flask-wtf服务，用作后台检测"""
+
     def generate_csrf_token(self, csrf_context=None):
         """
         重写此方法的原因是 flask-wtf 0.14 版本没有generate_csrf_token这个方法。
@@ -212,11 +213,27 @@ def get_arg(req, arg, default_value=''):
         arg) is None else req.args.get(arg)
 
 
+def get_args(req):
+    """一次性取出所有取参数集，注意，参数的值不能是json对象"""
+    the_form = req.form
+    arg_dict = {key: the_form[key] for key in the_form.keys()}
+    return arg_dict
+
+
 def get_real_ip(req):
     """
     获取当前请求的真实ip。参数只有一个：
     1.req  当前的请求。一般都是传入当前上下文的request
     return ip地址(字符串格式)
+    注意，如果前端的反向代理服务器是nginx的话，需要在配置文件中加上几句。
+    在location / 配置下面的proxy_pass   http://127.0.0.1:5666; 后面加上
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    然后才可以用headers["X-Forwarded-For"]取真实ip
+    虽然只加proxy_set_header X-Real-IP $remote_addr;这一句的话。
+    也可以用request.headers["X-Real-IP"]获取。
+    但为了和IIS的兼容性。还是需要再加一句
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     """
     try:
         ip = req.headers["X-Forwarded-For"].split(":")[0]
@@ -250,6 +267,8 @@ class OnlyID:
     1. 创建一个类实例，然用使用这个实例调用get_id方法返回一个唯一id。
     2. 直接使用类的静态方法:OnlyID.get() 返回一个唯一的id。
     return: 一个长度为20的字符串格式的id（纯数字组成的字符串）
+    注意，此方法在多进程下可能会有问题，需要加入os.gitpid()获取进程号进行区别 2017-03-25
+    已修正多线程下的问题   2017-03-25
     """
 
     def __init__(self):
@@ -259,6 +278,9 @@ class OnlyID:
         if not hasattr(cls, 'instance'):
             obj = super(OnlyID, cls).__new__(cls)
             obj.id_list = []
+            pid = os.getpid()  # 进程id用于区别不同的进程
+            pid_hex = hex(pid).lstrip("0x")  # 转16进制只为缩短长度
+            obj.pid_hex = pid_hex
             cls.instance = obj
             cls.instance.fill()
         return cls.instance
@@ -269,8 +291,11 @@ class OnlyID:
             self.fill()
         else:
             pass
-        # 2位数的年份的日期，格式化到毫秒
-        str1 = datetime.datetime.now().strftime('%y%m%d%H%M%S%f')
+        """
+        此段代码在多进程下有问题。
+        str1 = datetime.datetime.now().strftime('%y%m%d%H%M%S%f')  # 2位数的年份的日期，格式化到微秒
+        """
+        str1 = datetime.datetime.now().strftime('%y%m%d%H%M%S')
         str2 = self.id_list.pop()
         return str1 + str(str2)
 
@@ -298,9 +323,12 @@ class OnlyID:
     def fill(self):
         """重新填充备用的id"""
         while len(self.id_list) < 20:  # 最大备用id数设置
-            temp = random.randint(10, 99)
-            if temp not in self.id_list:
-                self.id_list.append(temp)
+            num = self.pid_hex
+            zfill = 8 - len(num)
+            num = int("f" * zfill, base=16)
+            self.id_list.clear()
+            for i in range(num):
+                self.id_list.append(self.pid_hex + hex(i).lstrip("0x").zfill(zfill))
 
 
 def surplus_datetime(end_datetime):
@@ -310,9 +338,9 @@ def surplus_datetime(end_datetime):
     if result <= 0:
         return "已结束"
     else:
-        days = result // (60*60*24)
-        hours = (result % (60*60*24)) // (60*60)
-        mins = (result % (60*6)) // 60
+        days = result // (60 * 60 * 24)
+        hours = (result % (60 * 60 * 24)) // (60 * 60)
+        mins = (result % (60 * 6)) // 60
         return "{}天{}小时{}分".format(int(days), int(hours), int(mins))
 
 
@@ -356,7 +384,7 @@ def login_required_user(f):
             """safe="=" 是不对等号进行编码"""
             referrer = urllib.request.quote(referrer.decode("utf8"), safe="=", encoding="utf8")
             return redirect(url_for("my_login", ref=referrer))
-            #return redirect(url_for("login")+"?ref={}".format(str(referrer)))
+            # return redirect(url_for("login")+"?ref={}".format(str(referrer)))
         else:
             result = user.check_id(user_id, user_password)
             if result['message'] != "success":
@@ -407,5 +435,3 @@ def drop_user(user_id):
 
 
 """用户模块快捷方法结束"""
-
-

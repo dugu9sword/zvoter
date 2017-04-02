@@ -111,13 +111,17 @@
 }
 .vote_btn_small{
     background: none;
-    font-size:18px;
-    line-height:18px;
+    font-size:16px;
+    line-height:16px;
     float:right;
     margin-top:15px;
 }
 .vote_btn_small>a{
     color: rgba(255,107,107,1);
+}
+.vote_btn_small>.btn-info{
+    border-radius: 0px 0px 0px 0px;
+    box-shadow: 2px 2px 2px gray;
 }
 /*主内容区，频道单元*/
 .main_content{
@@ -195,14 +199,16 @@
 }
 .my_list{
     margin-top:30px;
-    text-align: right;
+    text-align: center;
     padding-right:0px;
 }
 .list_title{
     color:rgba(53,63,79,1);
     font-size:14px;
     display:inline-block;
-    float:left;
+}
+.text_block{
+    display: inline-block;
 }
 .list_li{
     font-size:12px;

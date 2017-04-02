@@ -44,5 +44,7 @@ $(function(){
     $(window).resize(function(){
         re_size();
     });
+    if ($("#show_vote").text()=="yes")
+        $("#myModal").modal("show")
     //end
 });

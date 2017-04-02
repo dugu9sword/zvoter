@@ -25,7 +25,9 @@ $(function(){
     // 我要评论的锚点
     $("#jump_edit_area").click(function(){
         if(!login_flag){
-            window.open("/login");
+            var url = "http://"+ location.host+ "/login";
+            console.log(url);
+            window.open(url);
         }
         else{
             location.href = "#my_message";
@@ -59,8 +61,56 @@ $(function(){
         }
         else{}
     }
-    optimize_progress_bar();
+    optimize_progress_bar();  // 执行优化进度条的样式
 
+    // 回复评论按钮
+    $(".receive_btn").click(function(){
+        if(!login_flag){
+            window.open("/login");
+        }
+        else{
+            $("#to_comment").click();
+            var obj = $(this).parents(".comment_bottom:first");
+            var parent_comment = $.trim(obj.attr("data-id"));
+            var text = $.trim($(this).attr("data-text"));
+            $("#comment_obj").attr("data_parent_comment", parent_comment);
+            $("#my_message").attr("placeholder", text);
+            location.href = "#my_message";
+        }
+    });
+
+    // 点击切换到回复主题按钮
+    $("#to_topic").click(function(){
+        if(login_flag){
+            $("#to_topic").addClass("btn-primary");
+            $("#to_comment").removeClass("btn-primary");
+            $("#comment_obj").attr("data_parent_comment", 0);
+            $("#my_message").attr("placeholder", "欢迎吐槽");
+        }else{}
+    });
+
+    // 点击切换到回复评论按钮
+    $("#to_comment").click(function(){
+        if(login_flag){
+            if($("#to_comment").attr("class").indexOf("btn-primary") != -1){
+                //nothing...
+            }
+            else{
+                $("#to_topic").removeClass("btn-primary");
+                $("#to_comment").addClass("btn-primary");
+                $("#my_message").attr("placeholder", "请先点击评论下方的回复按钮");
+            }
+        }else{}
+    });
+
+    // 当选择回复评论，单没有选择对应的评论是，输入字符的时候切换成回复主题状态。
+    $("#my_message").keydown(function(){
+        if(login_flag){
+            if($("#to_comment").attr("class").indexOf("btn-primary") != -1 && $("#comment_obj").attr("data_parent_comment") == "0"){
+                $("#to_topic").click();
+            }
+        }else{}
+    });
 
     // 调整图片的高宽
     $(".img_a,.img_b").css("height", parseInt($(".voter_btn").css("width").split("px")[0])*0.75);
