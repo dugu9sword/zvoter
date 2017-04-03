@@ -19,7 +19,6 @@ import vote_tools
 import notification
 import banner_manage
 import comment
-import logging
 
 port = 5666  # 定义端口
 app = Flask(__name__)
@@ -44,11 +43,6 @@ SESSION_TYPE = 'redis'  # flask-session使用redis，注意必须安装redis数�
 app.config.from_object(__name__)  # flask-session相关
 Session(app)  # flask-session相关
 
-# """日志相关"""
-# app.debug = True
-# handler = logging.FileHandler('flask.log')
-# app.logger.addHandler(handler)
-# app.logger.info('/home/root/Hello Log')
 
 # cache = RedisCache()  # my_tools里面有，所以这里注销了。
 
@@ -108,11 +102,6 @@ def index():
     index_dict = topic.index_topic_list()  # 首页帖子字典
     side_bar_list = topic.side_bar_topic_list()  # 侧边栏的列表
     banner_list = banner_manage.get_banner()  # banner列表
-    if "show_vote" in session.keys():
-        show_vote = "yes"
-        session.pop("show_vote")
-    else:
-        show_vote = "no"
     if login_flag:
         try:
             user_img_url = session['user_img_url']
@@ -125,11 +114,11 @@ def index():
         return render_template("index.html", login_flag=login_flag, side_bar_list=side_bar_list,
                                user_img_url=user_img_url, user_level=user_level, banner_list=banner_list,
                                channel_list=channel_list, channel_dict=channel_dict, user_nickname=user_nickname,
-                               form=form, img_form=img_form, index_dict=index_dict, show_vote=show_vote)
+                               form=form, img_form=img_form, index_dict=index_dict)
     else:
         return render_template("index.html", login_flag=login_flag, channel_dict=channel_dict,
                                channel_list=channel_list, index_dict=index_dict, side_bar_list=side_bar_list,
-                               form=form, img_form=img_form, banner_list=banner_list , show_vote=show_vote)
+                               form=form, img_form=img_form, banner_list=banner_list)
 
 
 @app.route("/class_dict", methods=['post'])
@@ -235,7 +224,7 @@ def my_detail(key):
             if parent_comment_id in parent_dict.keys():
                 parent_dict[parent_comment_id]['children'].append(x)
             else:
-               raise KeyError("无主的子评论：{}".format(str(x)))
+                raise KeyError("无主的子评论：{}".format(str(x)))
         parent_list = list(parent_dict.values())
         up_a_list = list()  # 支持a的评论
         up_b_list = list()  # 支持a的评论
@@ -337,17 +326,7 @@ def my_login():
         print("base_url = {}".format(base_url))
         print("referrer = {}".format(referrer))
         print("url_path = {}".format(url_path))
-        # redirect_url = None
-        # if referrer is None:  # 直接打开页面
-        #     pass
-        # elif referrer == host_url or referrer == base_url:  # 刷新页面
-        #     pass
-        # elif referrer.find(host_url) != -1 and request.args.get("ref") is None:  # 有本站的referrer的情况
-        #     redirect_url = referrer.replace(host_url, "/")
-        #     redirect_url = base64.b64encode(redirect_url.encode("utf8"))
-        #     return redirect(url_for("my_login", ref=redirect_url))
-        # else:
-        #     pass
+
         """真正的get视图函数开始"""
         show_img_code = 0  # 是否显示图形验证码
         login_flag = is_login(session)  # 用户是否已登录
@@ -375,8 +354,6 @@ def my_login():
                 user_level = 1
                 user_img_url = result['data']['user_img_url']
                 user_nickname = result['data']['user_nickname']
-                if 'user_open_id' in session.keys():
-                    user.edit_user(user_id=user_id, user_open_id=session['user_open_id'])
                 set_user_login_info(session, user_id, user_nickname, user_password, user_img_url, user_level)
                 message = result
 
@@ -429,6 +406,7 @@ def my_register():
         if form.validate_on_submit():
             user_phone = request.form.get('phone')
             user_password = request.form.get('user_password')
+            user_nickname = request.form.get('user_nickname')
             token = get_arg(request, "csrf_token")
             img_code = get_arg(request, "img_code")
             if token == "" or not check_img_code(token, img_code):
@@ -436,13 +414,13 @@ def my_register():
             else:
                 user_id = get_only_id()
                 reg_args = {"user_phone": user_phone, "user_password": user_password,
-                            "user_id": user_id, "create_date": current_datetime()}
+                            "user_id": user_id, "user_nickname": user_nickname,
+                            "create_date": current_datetime()}
                 result = user.add_user(**reg_args)
                 if result['message'] == 'success':
                     user_id = user_id
                     user_level = 1  # 临时替代
                     user_img_url = '../static/image/guest.png'
-                    user_nickname = '新用户'
                     set_user_login_info(session, user_id, user_nickname, user_password, user_img_url, user_level)
                     message = result
 
@@ -485,9 +463,9 @@ def user_center_notification():
                                    user_img_url=user_img_url, user_level=user_level,
                                    user_info=user_info,
                                    notifications=notifications,
-                                   count_of_notifications = count_of_notifications,
-                                   count_of_unread_notifications = count_of_unread_notifications,
-                                   side_bar_list = side_bar_list
+                                   count_of_notifications=count_of_notifications,
+                                   count_of_unread_notifications=count_of_unread_notifications,
+                                   side_bar_list=side_bar_list
                                    )
     else:
         return render_template("user_center_notification.html", login_flag=login_flag)
@@ -1121,7 +1099,7 @@ def weixin_auth():
     state = request.args.get('state')
     resp = requests.get(
         'https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code' % (
-        appid, secret, code))
+            appid, secret, code))
     access_info = resp.json()
     access_token = access_info['access_token']
     openid = access_info['openid']
@@ -1139,11 +1117,6 @@ def weixin_auth():
 
     # 检查用户是否已经用微信登陆过，若有，则直接根据 open_id 填入用户名和密码自动登录，若没有，则将用户信息保留在session中，为用户注册做准备
     check_wx_result = user.check_wx(openid)
-    # return json.dumps(check_wx_result)
-    # if check_wx_result['message'] == 'exists':
-    #     return redirect(url_for("index"))
-    # else:
-    #     return check_wx_result
     if check_wx_result['message'] == 'exists':
         user_id = check_wx_result['data']['user_id']
         user_password = check_wx_result['data']['user_password']
@@ -1151,13 +1124,12 @@ def weixin_auth():
         user_nickname = check_wx_result['data']['user_nickname']
         user_level = 1
         set_user_login_info(session, user_id, user_nickname, user_password, user_img_url, user_level)
-        if state=="001":
+        if state == "001":
             return redirect(url_for("index"))
-        elif state=="002":
+        elif state == "002":
             return redirect(url_for("user_center_voter"))
-        elif state=="003":
-            session["show_vote"] = "true"
-            return redirect(url_for("index"))
+        elif state == "003":
+            return redirect(url_for("weixin_vote"))
     else:
         user_id = get_only_id()
         reg_args = {"user_open_id": openid,
@@ -1180,7 +1152,6 @@ def weixin_new_user():
     """微信新用户注册，使用之前存储在session中的用户信息自动注册新的用户"""
     reg_args = session['reg_args']
     result = user.add_user(**reg_args)
-    # return json.dumps(result)
     if result['message'] == 'success':
         user_id = reg_args['user_id']
         user_level = 1  # 临时替代
@@ -1194,36 +1165,52 @@ def weixin_new_user():
         message['result'] = json.dumps(result)
     return json.dumps(message)
 
+# @app.route("/t")
+# def t():
+#     session['user_open_id']="0pwdnvSWQ3Pt4cYyKl9eKBLqI"
+#     return render_template("user_weixin_binding.html")
 
-@app.route('/weixin_bind_phone')
-def weixin_bind_phone():
-    """微信绑定手机号的重定向"""
-    return redirect(url_for("login"))
 
-
-@app.route('/t/<openid>')
-def weixin_test(openid):
-    """这个方法用来在本地模拟微信接入，可以忽略不计"""
-    nickname = 'zhouyi'
-    check_wx_result = user.check_wx(openid)
-    print(json.dumps(check_wx_result))
-    if check_wx_result['message'] == 'exists':
-        session["user_id"] = check_wx_result['data']['user_id']
-        session["user_password"] = check_wx_result['data']['user_password']
-        session["user_img_url"] = check_wx_result['data']['user_img_url']
-        session["user_level"] = 1
-        return redirect(url_for("index"))
+@app.route('/weixin_bind_phone/<phone>/<password>',methods=['post'])
+def weixin_bind_phone(phone, password):
+    """微信绑定手机号"""
+    result = user_login_phone(phone, password)
+    if result['message'] == 'success':
+        user_id = result['data']['user_id']
+        user_level = 1
+        user_img_url = result['data']['user_img_url']
+        user_nickname = result['data']['user_nickname']
+        user.edit_user(user_id=user_id, user_open_id=session['user_open_id'])
+        set_user_login_info(session, user_id, user_nickname, password, user_img_url, user_level)
+        return json.dumps({"message":"success"})
     else:
-        user_id = get_only_id()
-        reg_args = {"user_open_id": openid,
-                    "user_id": user_id,
-                    "create_date": current_datetime(),
-                    "user_nickname": nickname,
-                    "user_sex": '男',
-                    "user_img_url": '../static/image/guest.png',
-                    "user_password": '000000'}
-        session['reg_args'] = reg_args
-    return render_template("user_weixin_binding.html", nickname=nickname, ttt=current_datetime())
+        return json.dumps({"message":"failed"})
+
+
+@app.route('/weixin_vote')
+def weixin_vote():
+    from_ip = get_real_ip(request)
+    """返回首页"""
+    login_flag = is_login(session)  # 用户是否已登录
+    channel_list = channel.channel_list()  # 频道列表
+    channel_dict = {x['channel_id']: x['channel_name'] for x in channel_list}
+    form = SearchLoginForm()  # 搜索from
+    img_form = PhotoForm()  # 上传图片from
+    if login_flag:
+        try:
+            user_img_url = session['user_img_url']
+        except KeyError:
+            user_img_url = ""
+        # 用户头像
+        user_img_url = '../static/image/guest.png' if user_img_url == "" else session['user_img_url']
+        user_level = 1  # 用户级别，暂时替代
+        user_nickname = session['user_nickname']
+        return render_template("weixin_vote.html", login_flag=login_flag,
+                               user_img_url=user_img_url, user_level=user_level,
+                               channel_list=channel_list, channel_dict=channel_dict, user_nickname=user_nickname,
+                               form=form, img_form=img_form)
+    else:
+        return redirect(url_for("index"))
 
 
 if __name__ == '__main__':

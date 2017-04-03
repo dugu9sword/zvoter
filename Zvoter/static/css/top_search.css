@@ -43,9 +43,12 @@ a:hover {
 #reg_gift {
     color: rgba(159, 167, 183, 1);
     font-size: 14px;
-    padding: 0;
+    padding-left: 0.8em;
     white-space: nowrap;
     overflow: hidden;
+    text-align: center;
+    display: inline-block;
+
 }
 
 #logo {

@@ -1,6 +1,17 @@
-
-
 # LOG
+
+*update 2017/4/3*
+1. 微信投票相关代码：
+    - 在 flask_server.py 中修改 weixin_auth，添加 weixin_vote，删除 weixin_test
+    - 添加 weixin_vote.html，submit_topic_weixin.js
+2. 修改 user_center 相关代码：
+    - 删除 user_center_voter.css
+    - 添加 user_center.css
+    - 修改 user_center_voter.html，user_center_info.html，user_center_notification.html
+3. 修改微信绑定的相关代码：
+    - 修改 flask_server.py 中的 my_login 函数中以前加的 user_open_id 相关代码，当时用于绑定用户，现在单独抽出实现
+    - 修改 flask_server.py 中的 weixin_bind_phone 函数
+    - 修改 user_weixin_binding.html， user_weixin_binding.js， user_weixin_binding.css 三份代码
 
 *update 2017/4/2*
 

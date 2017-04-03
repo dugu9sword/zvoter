@@ -73,7 +73,7 @@ def check_user_args(**kwargs):
             result = my_db.validate_arg(v, "-")
             if not result:
                 flag = result
-                msg = "user_born_date 或 user_address 验证失败"
+                msg = ("user_born_date 或 user_address 验证失败")
                 print("user_born_date 或 user_address 验证失败")
                 break
         elif k == "create_date":
@@ -135,7 +135,6 @@ def add_user(**kwargs):
     """增加用户,参数必须是键值对的形式,注意，暂时没追加微信登录的方式"""
     message = {"message": "success"}
     flag, msg = check_user_args(**kwargs)
-    # flag , msg=True,""
     if not flag:
         message["message"] = "参数错误 %s" %msg
     else:
@@ -439,6 +438,6 @@ def page(index=1, length=30):
 
 # print(page(1, 30))
 # print(login("15618317376", ""))
-# print(add_user(user_id='20121457894123456289',user_phone='15618311366',user_password="",create_date='2017-01-01'))
+# print(add_user(user_id='20121457894123456279',user_phone='15618311366',user_password="",create_date='2917-01-01'))
 # print(edit_user(user_id='20121457894123456789',user_phone='15618317376',user_password="12",create_date='2917-01-01'))
 # print(change_status("delete",'20121457894123456789'))
